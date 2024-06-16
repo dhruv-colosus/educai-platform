@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String   @id @default(uuid())
+  email    String?  @unique
+  address  String?  @unique
+  provider Provider
+  password String?
+  balance  Decimal  @default(1000000000000000000) @db.Decimal(65, 0)
+
+  Order Order[]
+
+  createdAt       DateTime          @default(now())
+  BalanceSnapshot BalanceSnapshot[]
+  TokenBalance    TokenBalance[]
+}
+
+model Token {
+  address      String         @id
+  name         String
+  symbol       String
+  decimals     Int
+  TokenBalance TokenBalance[]
+  Order        Order[]
+}
+
+model TokenBalance {
+  id           String  @id @default(uuid())
+  token        Token   @relation(fields: [tokenAddress], references: [address])
+  tokenAddress String
+  balance      Decimal @default(0) @db.Decimal(65, 0)
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@unique([userId, tokenAddress])
+}
+
+model Order {
+  id     String @id @default(uuid())
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  type     OrderType
+  resolved Boolean   @default(false)
+
+  token        Token   @relation(fields: [tokenAddress], references: [address])
+  tokenAddress String
+  tokenValue   Decimal @db.Decimal(65, 0)
+  in           Decimal @db.Decimal(65, 0)
+  out          Decimal @db.Decimal(65, 0)
+
+  createdAt DateTime @default(now())
+}
+
+model BalanceSnapshot {
+  id     String  @id @default(uuid())
+  amount Decimal @db.Decimal(65, 0)
+  user   User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  userId    String
+}
+
+enum Provider {
+  CREDENTIALS
+  WALLET
+  GOOGLE
+}
+
+enum OrderType {
+  BUY
+  SELL
+}
+
+// TODO add indexing
